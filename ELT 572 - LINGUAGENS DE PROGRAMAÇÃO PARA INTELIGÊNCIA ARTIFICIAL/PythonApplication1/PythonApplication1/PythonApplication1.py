@@ -10,14 +10,14 @@ print("notas2 = ",notas2)
 idades=np.zeros(5,dtype=int)#vetor de inteiros inicializado com 0
 print("idades = ",idades)
 #Vetores 4
-contador=np.array([4,3,2,1])#inicialização criada
+contador=np.array([4,3,2,1])#inicializacao criada
 print("contador = ",contador)
 #Vetores########################################################################
-n=int(input("Informe o número de elementos: "))
+n=int(input("Informe o numero de elementos: "))
 A=np.empty(n)#cria arranjo
 #le do teclado
 for i in range(0,n):
-  A[i]=float(input("Informe o %dº elemento: "%(i+1)))
+  A[i]=float(input("Informe o %d elemento: "%(i+1)))
 #multiplicar o vetor por 3
 for i in range(0,n):
   A[i]=A[i]*3
