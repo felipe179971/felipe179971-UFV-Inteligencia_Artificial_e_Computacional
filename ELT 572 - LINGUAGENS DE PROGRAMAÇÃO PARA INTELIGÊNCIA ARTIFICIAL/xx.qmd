@@ -40,16 +40,3 @@ ax.grid(True)
 plt.show()
 
 ```
-
-```{python}
-prompt="\nInforme o nome de uma cidade que você visitou:"
-prompt+="\n(Digite 'pare' quando tiver informado a cidade."
-active=True
-while True:
-  city=input(prompt)
-  if city=='pare':
-    break
-  else:
-    print(f"Eu gostaria de visitar {city.title()}!")
-
-```
