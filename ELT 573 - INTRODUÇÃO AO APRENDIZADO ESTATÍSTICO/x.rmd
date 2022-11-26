@@ -1,6 +1,6 @@
 ---
 title: "x"
-output: html_document
+output: pdf_document
 date: "2022-11-26"
 ---
 
