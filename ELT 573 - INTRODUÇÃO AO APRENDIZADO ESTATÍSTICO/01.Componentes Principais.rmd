@@ -1,0 +1,56 @@
+---
+title: "01.Componentes Principais"
+author: "Felipe Rocha"
+date: "2022-11-30"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\ Antes de tudo, puxando a função de PCA
+```{r}
+source("F:/Estudo/Estudo---UFV/UFV---GitHub/00.Functions/Function_PCA.R")
+```
+
+# Exemplo 01: USArrests
+
+## 10.2 Principal Components Analysis 
+
+```{r g1, message=FALSE, warning=FALSE}
+pr.out=prcomp(USArrests, scale=TRUE)
+pr.out$rotation=-pr.out$rotation
+pr.out$x=-pr.out$x
+ggbiplot(pcobj=pr.out, obs.scale = 1, var.scale = 1,
+         groups = ifelse(USArrests$UrbanPop>=50,"A","B"),ellipse = TRUE, 
+         circle = TRUE,labels = rownames(USArrests) ) +
+  scale_color_discrete(name = '') +
+  theme(legend.direction = 'horizontal', legend.position = 'top')+theme_minimal()
+```
+
+\ *Obs.: O groups é apenas para testar a opção 'groups' da funão*
+
+\ Na Figura, vemos que o **primeiro** vetor de carregamento coloca peso aproximadamente igual em Assalto, Assassinato e Estupro, com peso muito menor em UrbanPop. Portanto, esse componente corresponde aproximadamente a uma medida das taxas gerais de crimes graves. O **segundo** vetor de carregamento coloca a maior parte de seu peso no UrbanPop e muito menos peso nos outros três recursos. Assim, esse componente corresponde aproximadamente ao nível de urbanização do estado. No geral, vemos que as variáveis relacionadas ao crime (Assassinato, Assalto e Estupro) estão localizadas próximas umas das outras, e que a variável UrbanPop está distante das outras três. Isso indica que as variáveis relacionadas ao crime estão correlacionadas entre si – estados com altas taxas de homicídios tendem a ter altas taxas de agressão e estupro – e que a variável UrbanPop está menos correlacionada com as outras três.
+
+\ Podemos examinar as diferenças entre os estados por meio dos dois vetores de pontuação dos componentes principais mostrados na Figura. Nossa discussão sobre os vetores de carga sugere que estados com grandes pontuações positivas no **primeiro componente**, como Califórnia, Nevada e Flórida, têm altas taxas de criminalidade, enquanto estados como Dakota do Norte, com pontuações negativas no **primeiro componente**, têm baixas taxas de criminalidade. 
+
+\ A Califórnia também tem uma pontuação alta no **segundo componente**, indicando um alto nível de urbanização, enquanto o oposto é verdadeiro para estados como o Mississippi. Estados próximos de zero em ambos os componentes, como Indiana, têm níveis aproximadamente médios de criminalidade e urbanização.
+
+### The Proportion of Variance Explained
+
+```{r g2, message=FALSE, warning=FALSE}
+PCA_Prop_Var(pr.out)
+```
+
+\ Nos dados do *USArrests*, o **primeiro componente principal** explica 62,0% da variação nos dados, e o próximo componente principal explica 24,7% da variação. Juntos, os dois primeiros componentes principais explicam quase 87% da variância dos dados, e os dois últimos componentes principais explicam apenas 13% da variância. Isso significa que a Figura fornece um resumo bastante preciso dos dados usando apenas duas dimensões. O PVE de cada componente principal, assim como o PVE cumulativo, é mostrado na Figura.
+
+
+
+
+\ Nos dados do *USArrests*, o **primeiro componente principal** explica 62,0% da variação nos dados, e o próximo componente principal explica 24,7% da variação. Juntos, os dois primeiros componentes principais explicam quase 87% da variância dos dados, e os dois últimos componentes principais explicam apenas 13% da variância. Isso significa que a Figura fornece um resumo bastante preciso dos dados usando apenas duas dimensões. O PVE de cada componente principal, assim como o PVE cumulativo, é mostrado na Figura.
+
+
+
+
+
