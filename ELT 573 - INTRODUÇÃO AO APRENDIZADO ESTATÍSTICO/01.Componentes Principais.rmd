@@ -45,12 +45,17 @@ PCA_Prop_Var(pr.out)
 
 \ Nos dados do *USArrests*, o **primeiro componente principal** explica 62,0% da variação nos dados, e o próximo componente principal explica 24,7% da variação. Juntos, os dois primeiros componentes principais explicam quase 87% da variância dos dados, e os dois últimos componentes principais explicam apenas 13% da variância. Isso significa que a Figura fornece um resumo bastante preciso dos dados usando apenas duas dimensões. O PVE de cada componente principal, assim como o PVE cumulativo, é mostrado na Figura.
 
-
-
-
 \ Nos dados do *USArrests*, o **primeiro componente principal** explica 62,0% da variação nos dados, e o próximo componente principal explica 24,7% da variação. Juntos, os dois primeiros componentes principais explicam quase 87% da variância dos dados, e os dois últimos componentes principais explicam apenas 13% da variância. Isso significa que a Figura fornece um resumo bastante preciso dos dados usando apenas duas dimensões. O PVE de cada componente principal, assim como o PVE cumulativo, é mostrado na Figura.
 
+# Avaliação referente ao conteúdo ministrado na Semana 1  
 
 
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 1/01.png")
 
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 1/02.png")
 
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 1/03.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 1/04.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 1/05.png")
