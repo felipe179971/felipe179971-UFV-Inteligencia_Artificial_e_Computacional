@@ -1,0 +1,307 @@
+---
+title: "05.Árvores de Regressão e Regressão Logística"
+author: "Felipe Rocha"
+date: "2022-12-17"
+output: pdf_document
+---
+
+# Aula 05: Árvore de Regressão  
+
+\ Antes de tudo, carregando os pacotes  
+
+```{r message=FALSE, warning=FALSE}
+#Instalar Pacote
+#install.packages("tree")
+#install.packages("randomForest")
+
+library(tree) #Fitting Regression Trees 
+library(MASS) #Carregar o banco de dados
+library(randomForest) #Bagging and Random Forests
+library(nnet)
+```
+## 8.3.2 Fitting Regression Trees  
+
+
+### Ajustando a Árvore  
+  
+```{r}
+#Utilizando dados do R (Boston - Valores de casas no suburbio de Boston)
+data(Boston)
+head(Boston)
+#Informacoes sobre o arquivo de dados podem ser acessadas
+#?Boston
+
+#Particionar o conjunto de dados (Treinamento e validacao)
+set.seed(1)
+train = sample (1:nrow(Boston), nrow(Boston)/2)
+
+#Ajuste de uma arvore
+tree.boston <- tree::tree(medv ~ ., data = Boston, subset=train)
+
+#Resumo (Apenas uma variavel foi utilizada na construcao da arvore
+summary(tree.boston)
+```
+
+\ Observe que a saída de *summary()* indica que apenas quatro das variáveis foram usadas na construção da árvore para prever **medv** (valor médio de casas ocupadas pelos proprietários em\$ 1000s).   
+
+- **rm**: número médio de quartos por habitação;  
+- **lstat**: percentual de indivíduos com nível socioeconômico mais baixo;  
+- **crim**: taxa de criminalidade per capita por cidade;  
+- **age**: proporção de unidades ocupadas pelo proprietário construídas antes de 1940.  
+
+\ No contexto de uma árvore de regressão, o *deviance* é simplesmente a soma dos erros quadrados da árvore. Agora plotamos a árvore. 
+  
+
+```{r}
+#Apresentacao da arvore ajustada
+plot(tree.boston)
+text(tree.boston)
+```
+\ A árvore indica que valores mais altos de **rm** (quartos) correspondem a casas mais caras (valore médio de US 48.380). A árvore prevê que para poucos quartos ($rm<6.9595$), baixa renda ($lstat>14.405$) e altas taxas de crimes ($crim>11.4863$) possuem as casas com menor valor médio, em torno de US 10.320.  
+
+\ Em algumas situações, essa árvore pode ser super-ajustada, ou seja, causar o problema do over-fitting, que significa se ajustar bem no treinamento mas não trabalhar bem na validação. Agora usamos a função *cv.tree()* para ver se a poda da árvore
+melhora o desempenho. 
+
+```{r}
+cv.boston=tree::cv.tree(tree.boston)
+plot(cv.boston$size ,cv.boston$dev ,type='b')
+```
+
+\ Verificando que de 7 para 6 o deviance se reduz de forma insignificante mas de 6 para 5 já é mais significante, podemos fazer a polda em 5.
+ 
+```{r}
+#Se desejar podar
+mod_poda=tree::prune.tree(tree.boston,best=6)
+plot(mod_poda)
+text(mod_poda, pretty =0)
+```
+\ E agora temos apenas 6 nós terminais (após a poda).  
+
+### Fazendo Predições  
+  
+```{r}
+yhat=predict(mod_poda ,newdata=Boston[- train ,])
+boston.test=Boston[-train ,"medv"]
+REQM <- sqrt(mean((yhat -boston.test)^2))
+REQM
+```
+
+\ Em outras palavras, o conjunto de teste MSE associado à árvore de regressão é 35,28688. A raiz quadrada do MSE é, portanto, em torno de  5,940276, indicando que esse modelo leva a previsões de teste que estão dentro de cerca de US$ 5.940 do verdadeiro valor médio de residências no subúrbio.  
+
+## 8.3.3 Bagging and Random Forests  
+
+\ Um dos problemas das árvores de regressão é o baixo poder preditivo. A literatura sugere algumas alternativas, dentre eles o **Bagging** e o **Random Forests**. 
+
+```{r}
+mod_bag = randomForest::randomForest( medv ~ .,data=Boston , subset=train ,
+mtry=ncol(Boston)-1,importance =TRUE, ntree = 100)
+mod_bag
+plot(mod_bag)
+```
+
+
+\ O argumento $$mtry=13$$ indica que todos os 13 preditores devem ser considerados para cada divisão da árvore — em outras palavras, o **Bagging** deve ser feito e não o **Random Forests**.
+
+```{r}
+#Fazendo predição
+yhat.bag = predict (mod_bag , newdata=Boston[-train ,])
+#Avaliando o modelo
+REQM_bag <- sqrt(mean((yhat.bag - boston.test)^2))
+REQM_bag
+```
+\ O conjunto de teste MSE associado à árvore de regressão bagged é 23,23893 (e RQME 4.820678), menro que a árvore ajustada anteriormente. Poderíamos alterar o número de árvores cultivadas por *randomForest()* usando o argumento **ntree** que, ao invés de utilziar todas as variáveis, utiliza apenas uma certa quantidade.
+
+\ A literatura sugere utilizar $\sqrt p$ quando se constroe uma random forest de classificação e $\frac{p}{3}$ quando se trata de uma random forest de regressão.
+No nosso exemplo, usaremos $\frac{13}{3}=4$ aproximadamente.  
+
+
+```{r}
+mod_rf = randomForest::randomForest(medv ~ .,data=Boston , subset=train ,
+mtry=4, importance =TRUE)
+yhat.rf = predict(mod_rf,newdata=Boston[- train ,])
+REQM_rf <- sqrt(mean((yhat.rf-boston.test)^2))
+REQM_rf
+```
+\ Que resultou em uma melhoria em relação ao **Bagging**.
+
+\ Usando a função **important()**, podemos ver a importância de cada variável.
+
+```{r}
+#Importância (Baseado nas amostras out-of_bag randomForest ) 
+i_mod_rf <-randomForest::importance(mod_rf)
+i_mod_rf
+```
+\ Duas medidas de importância variável são relatadas. O primeiro é baseado na diminuição média da precisão nas previsões das amostras fora da sacola quando uma determinada variável é excluída do modelo. O último é uma medida da diminuição total na impureza do nó que resulta das divisões sobre essa variável, calculada a média de todas as árvores. No caso de **Random Forests regressão**, a impureza do nó é medida pelo RSS de treinamento, e para **Random Forests de classificação** pelo deviance. Gráficos dessas medidas de importância podem ser produzidos usando a função *varImpPlot()*.
+
+```{r}
+randomForest::varImpPlot(mod_rf)
+```
+
+
+\ Os resultados indicam que em todas as árvores consideradas na **Random Forests**, o nível de riqueza da comunidade(**lstat**) e o tamanho da casa (**rm**) são de longe as duas variáveis mais importantes.  
+
+# Aula 06: Regressão Logística  
+ 
+```{r}
+##Leitura de dados
+
+#Modelo de Probabilidade Linear
+dados<-read.table("F:/Estudo/Estudo---UFV/UFV---GitHub/01.Datasets/dados_doenca.txt", h=T)
+head(dados)
+```
+
+## Modelo Linear  
+
+```{r}
+#Ajuste do modelo
+reg<-lm(doenca ~ tm + ur, data=dados)
+summary(reg)
+```
+
+\ Como não estamos interessados em inferência e sim em calssificaçã, podemos acessar as classificações por meio do *fitted*.  
+  
+```{r}
+#Probabilidades do ano ter a doenca
+data.frame(ano=dados$ano,probabilidade=reg$fitted)
+```
+\ E assim temos a probabilidade de ter ocorrido a doença naquele determinado ano.  
+
+```{r}
+#Figura (anos em funcaodas probabilidades)
+plot(dados$ano,reg$fitted, xlab="ano", 
+ylab="probabilidade estimada de ter a doenca", ylim=c(-0.2,1.2))
+#Adicionando espaco parametrico de probabilidade
+abline(h=0, col="red")
+abline(h=1, col="red")
+```
+
+\ Observe que temos um valor fora do intervalo de probabilida $[0,1]$, o que é um problema do modelo de probabilidade linear. 
+
+\ Fazendo a classificação, temos  
+
+```{r}
+#Acessando medidas de qualidade
+prob<-reg$fitted.values
+prob
+
+#Classificando em classes
+reg.classe<- ifelse(prob > 0.5, 1, 0)
+reg.classe
+```
+\ Por meio dessa classificação, podemos contruir nossa tabela de confusão, que é muito importante para que possamos avaliar a capacidade preditiva do modelo.
+  
+```{r}
+#Tabela de Confusão
+tabela <- table(dados$doenca,reg.classe)
+tabela
+```
+
+\ Na diagonal pricipalz temos as classificações corretas e na outra, as erradas. A partir dessa tabela, é possível calcular outras medidas.     
+  
+```{r} 
+#Taxa de Erro Aparente (Percentual de erros)
+TEA <- 1 - sum(diag(tabela))/sum(tabela)
+TEA
+
+#Acuracia (Percentual de acertos)
+AC <- sum(diag(tabela))/sum(tabela)
+AC
+
+#Sensibilidade (taxa de Verdadeiros Positivos)
+S <- tabela[2,2]/ sum(tabela[2,])
+S
+
+#Especificidade (taxa de Verdadeiros Negativos)
+E <- tabela[1,1]/ sum(tabela[1,])
+E
+```
+
+\ Além do problema de termos probabilidades fora do intervalo [0,1], o modelo linear considera que a relação entre as varáveis independentes e a variável resposta como linear, o que na prática nem sempre é real. Para solucionar esse problema, temos outros modelos.  
+
+
+## Modelo Logit  
+
+  
+
+```{r} 
+#Modelo Logit (Nao lineariadade entre Y e variaveis explicativas)
+logit <- glm(doenca ~ tm + ur , data = dados, family=binomial(link="logit"))
+
+#Valores de probabilidade estimados
+prob<-logit$fitted.values
+
+#Classificao
+prob<-logit.classe<- ifelse(prob > 0.5, 1, 0)
+
+#Acessando medidas de qualidade
+#Tabela de confusao
+tabela <- table(dados$doenca,logit.classe)
+tabela
+
+#Taxa de Erro Aparente
+TEA <- 1 - sum(diag(tabela))/sum(tabela)
+TEA
+
+#Acuracia
+AC <- sum(diag(tabela))/sum(tabela)
+AC
+
+#Sensibilidade (Verdadeiros Positivos)
+S <- tabela[2,2]/ sum(tabela[2,])
+S
+
+#Especificidade (Verdadeiros Negativos)
+E <- tabela[1,1]/ sum(tabela[1,])
+E
+```
+
+## Modelo Logit Multinomial  
+
+\ Para quando tenho mais de duas classes  
+
+```{r}
+
+
+#Logit multinomial (Mais de duas classes
+#Instalar pacote
+#install.packages("nnet")
+#library(nnet)
+
+#leitura dos dados
+dados<-iris
+head(dados)
+
+#Ajuste
+logitm <- nnet::multinom(Species ~ Sepal.Length + Sepal.Width + Petal.Length + 
+                           Petal.Width, data = dados)
+
+#Probabilidades estimadas
+prob_logitm <- predict(logitm, dados[,1:4], "probs")
+prob_logitm
+
+#Classes
+classe <- apply(prob_logitm, 1, which.max)
+head(classe)
+
+#Codificacao original
+classe[which(classe=="1")] <- levels(dados$Species)[1]
+classe[which(classe=="2")] <- levels(dados$Species)[2]
+classe[which(classe=="3")] <- levels(dados$Species)[3]
+head(classe) 
+
+#Acessando medidas de qualidade
+#Tabela de confusao
+tabela1<-table(dados$Species, classe) 
+tabela1
+
+##Taxa de Erro Aparente
+TEA <- 1 - sum(diag(tabela1))/sum(tabela1)
+TEA
+
+#
+AC < - sum(diag(tabela1))/sum(tabela1)
+AC
+```
+ 
+
+
