@@ -1,5 +1,5 @@
 ---
-title: "05.Árvores de Regressão e Regressão Logística"
+title: "03.Arvores de Regressao e Regressao Logistica"
 author: "Felipe Rocha"
 date: "2022-12-17"
 output: pdf_document
@@ -303,5 +303,16 @@ AC < - sum(diag(tabela1))/sum(tabela1)
 AC
 ```
  
+# Avaliação referente ao conteúdo ministrado na Semana 3  
 
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 3/03.1.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 3/03.2.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 3/03.3.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 3/03.4.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 3/03.5.png")
 

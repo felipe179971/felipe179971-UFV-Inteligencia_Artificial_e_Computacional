@@ -1,0 +1,232 @@
+---
+title: "04.Analise Discriminante e Arvore de Decisao"
+author: "Felipe Rocha"
+date: "2022-12-17"
+output: pdf_document
+---
+
+# Aula 07: Análise Discriminante  
+
+\ Antes de tudo, carregando os pacotes  
+
+```{r message=FALSE, warning=FALSE}
+#Instalar Pacote
+#install.packages("MASS")
+#install.packages("tree")
+#install.packages("caret")
+
+library(MASS) #QDA Analise de discriminante quadratica e LDA Linear Discriminant Analysis
+library(tree) #Arvore de decisao
+library(caret) #Medidas de Performance 
+library(randomForest) #Bagging e randomForest
+
+
+```
+## Iris  
+ 
+
+### Validação Cruzada (leave one out)  
+
+\ Para realizar essa anlise, vamos utilizar o procedimento de validação cruzada, 
+conhecida como *leave one out*. Esse procedimento é utilizado para comparar a 
+capacidade preditiva do modelo - Por exemplo, se temos um conjunto de dados com 
+300 indivíduos, estimamos a função com 299 e predizemos a função para o próximo 
+índivudo, e assim fazemos de 1 em 1. Esse procedimento é utilizado para evitar a 
+superestimação do poder de classificação do modelo, ou seja, para tentar fazer a 
+predição de maneira mais independente possível. 
+  
+#### Funçaõ Linear    
+  
+```{r}
+r <- lda(formula = Species ~ ., #especi em funcao de todas as outras vars
+         data = iris, #do dados iris
+         prior = c(1,1,1)/3, #tenho 3 populacoes e defini probabilidade de 
+         #ocorrencia de cada populacao iguais para todas (1/3)
+         CV=TRUE) #CV=TRUE: quero validacao cruzada (leave one out)
+```
+
+\ Construindo a tabela de confusão, onde o número de classificações corretas ficam 
+na diagonal. 
+  
+```{r}
+# Funcao Linear
+classificacao <- r$class
+cvl <- table(iris$Species,classificacao)
+cvl
+```
+\ Taxa de erro aparente 
+
+```{r}
+#Taxa de Erro Aparente
+TEA <- 1 - (sum(diag(cvl))/sum(cvl))
+TEA
+```
+
+#### Funçaõ Quadrática  
+
+```{r}
+# Funcao uadratica
+
+q <- qda(formula = Species ~ ., 
+         data = iris, 
+         prior = c(1,1,1)/3, CV=TRUE)
+
+classificacao<- q$class
+cvq <- table(iris$Species,q$class)
+cvq
+
+
+#Taxa de Erro Aparente
+TEA <- 1 - (sum(diag(cvq))/sum(cvq))
+TEA
+```
+
+\ Nesse caso, as taxas de erros ficaram bem próximas.  
+
+# Aula 08: Análise Discriminante  
+
+## Iris
+
+### Criando o modelo  
+  
+\ O primeiro passo da construção da nossa árvore é separar a população entre treinamento 
+e validação. 
+\ No exemplo, separamos em 3 conjuntos de dados contendo a iris de determinada espécie;
+ separado esses 3 conjuntos, pegamso os 5 primeiros de cada um como treinamento e 
+ o restante será para validação. Esse tipo de separação foi utilizada para que todas 
+ as esécies possuíssem a mesma proporção na construção e na validação.  
+  
+```{r}
+#Particionar o conjunto de dados (Treinamento e validacao)
+iris_setosa<-iris[iris$Species=="setosa",] 
+iris_versicolor <- iris[iris$Species=="versicolor",] 
+iris_virginica <- iris[iris$Species=="virginica",] 
+iris_train <- rbind(iris_setosa[1:25,],iris_versicolor[1:25,],
+                    iris_virginica[1:25,])
+iris_test <- rbind(iris_setosa[26:50,],iris_versicolor[26:50,],
+                   iris_virginica[26:50,])
+```
+
+\ Fazendo a árvore  
+  
+```{r}
+#Ajuste de uma arvore
+arvore1 <- tree::tree(Species ~ Sepal.Width + Sepal.Length + Petal.Length + 
+                        Petal.Width, data = iris_train)
+
+#Resumo (Apenas uma variael foi utilizada na construcao da arvore)
+summary(arvore1)
+```
+
+\ Observamos que foi utilizado "Petal.Length", "Petal.Width" e "Sepal.Width", onde 
+"Sepal.Length" acabou não sendo utilizado, como pode ser visto no gráfico: 
+
+```{r}
+#Apresentacao da arvore ajustada
+plot(arvore1)
+text(arvore1)
+```
+
+\ Se tivermos um comprimento de petala menor que 2.6, ele é classificado 
+como *setosa* ($Sepal.Length<2.6$). Observe que temos as mesmas informações em alguns 
+nós terminais, indicando a necessidade de uma poda ($Sepal.Width<2.35$ ou $Sepal.Width>2.35$ 
+classifica em *versicolor*).  
+
+```{r}
+#Verificar se e interessante realizar a poda
+cv.iris=cv.tree(arvore1)
+plot(cv.iris$size ,cv.iris$dev ,type="b")
+```
+  
+\ Percebemos que a deviance (o críterio que deve ser minimizado) atinge seu mínimo
+ em 2 nós. Mas, como temos 3 espécies, vamos considerar 3 nós.  
+ 
+```{r}
+#Se desejar podar
+mod_poda=prune.tree(arvore1,best=3)
+plot(mod_poda)
+text(mod_poda, pretty =0)
+
+```
+ 
+### Predição  
+  
+Utilizando o modelo podado 
+
+```{r}
+#Predicao
+pred_arv <- predict(mod_poda, iris_test, type="class")
+head(pred_arv)
+```
+
+### Medidas de Performance  
+
+\ Para isso, vamos utilizar o pacote *caret*. Com esse pacote, fazemos a matrix 
+de confusão (diagonal com os acertos).  
+
+```{r}
+caret::confusionMatrix(pred_arv, iris_test$Species) 
+
+```
+\ Acurácia de $0.9467=94.67%$. O teste de hipótese *P-Value [Acc > NIR]* indica 
+se existe um desbalanceamento entre as classes. No nosso caso, como rejeitou $H_0$, 
+não existe esse desbalanceamento e o modelo discrimina bem todos os grupos. O 
+coeficiente de *Kappa* é a acurácia ponderada por uma probabilidade de ter concordâncias 
+aleatórias, como vários outros índices...
+
+\ um dos problemas desse modelo, é o pouco poder preditivo. Para tentar aumentar 
+esse poder, podemos utilizar o *Bagging* ou o *randomForest*.
+
+### Aumentando o Poder Preditivo (*Bagging* e *randomForest*)  
+  
+```{r}
+#Ajuste bagging
+bagging <- randomForest(Species~., data=iris_train,  mtry = 4)#mtry indica quantas 
+#variaveis serao utilizadas no processo de reamostragem
+bagging
+
+#Avaliacao do modelo (Predicao)
+pred_bagg <- predict(bagging, iris_test)
+confusionMatrix(pred_bagg, iris_test$Species)
+
+#Random Forest
+rf<- randomForest(Species~., data=iris_train,  mtry = 2)#no Random Forest, sugere-se
+#utilizar um numero que seja rais de p (como temos p=4 variaveis, usaremos p=2=mtry) 
+rf
+
+#Avaliacao do modelo (Predicao)
+pred_rf <- predict(rf, iris_test)
+confusionMatrix(pred_rf, iris_test$Species)
+
+#Importancia (Baseado nas amostras out-of_bag)
+i_mod_rf <-importance(rf)
+i_mod_rf
+```
+
+\ Verificando a importância das variáveis no modelo de classfiicação. (maiores 
+valores indicam as variáveis mais importantes).    
+
+```{r}
+varImpPlot (rf)
+
+```
+  
+# Avaliação referente ao conteúdo ministrado na Semana 4  
+  
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 4/04.1.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 4/04.2.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 4/04.3.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 4/04.4.png")
+
+![]("F:/Estudo/Estudo---UFV/Subject/ELT 573 - INTRODUÇÃO AO APRENDIZADO ESTATÍSTICO/Tests/Avaliação referente ao conteúdo ministrado na Semana 4/04.5.png")
+
+
+ 
+   
+  
+  
+
