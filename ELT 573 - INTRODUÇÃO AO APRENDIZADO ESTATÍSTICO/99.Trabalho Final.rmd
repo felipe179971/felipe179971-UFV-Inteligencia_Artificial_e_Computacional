@@ -1,7 +1,7 @@
 ---
 title: "Trabalho Final"
-author: "Felipe Rocha"
-date: "2022-1-6"
+author: "Felipe da Rocha Ferreira"
+date: "07/01/2023"
 output: pdf_document
 ---
 
@@ -92,11 +92,137 @@ PCA_Prop_Var(pca)
 rm(dados,dados2,km,pca,pr.out)
 ```
 
-# Tarefa 2
+# Tarefa 2  
 **Utilizando o mesmo conjunto de dados BreastCancer realize análises de classificação. Para tanto, a variável Class (última variável do conjunto) é nossa variável dependente. Utilize validação cruzada para avaliar os modelos ajustados. Faça um relatório. Tal relatório deve ser estregue de maneira organizada discutindo os resultados encontrados.**
 
+\ Utilizando o mesmo banco de dados anterior (683 observações), mas agora contando com a variável qualitativa *Class*, vemos que a amostra conta com $444$ observações classificadas em *benign* e $239$ em $malignant$. 
 
-   
+```{r message=FALSE, warning=FALSE}
+library(mlbench) #banco de dados
+library(MASS) #QDA Analise de discriminante quadratica e LDA Linear Discriminant Analysis
+library(dplyr)
+library(tidyr)
+data(BreastCancer)
+dados=BreastCancer;rownames(dados)=dados$id
+dados=BreastCancer%>%dplyr::select(-c(Id))%>%dplyr::mutate(
+  dplyr::across(.cols=colnames(.)[-which(colnames(.)=="Class")],~as.numeric(.)))%>%
+  tidyr::drop_na();rm(BreastCancer);table(dados$Class)
+```
+## LDA com validação Cruzada (leave one out)  
+   \ Para realizar essa classificação, vamos utilizar o procedimento de validação cruzada, 
+conhecida como *leave one out*. Esse procedimento é utilizado para comparar a 
+capacidade preditiva do modelo - Por exemplo, se temos um conjunto de dados com 
+300 indivíduos, estimamos a função com 299 e predizemos a função para o próximo 
+indivíduo, e assim fazemos de 1 em 1. Esse procedimento é utilizado para evitar a 
+superestimação do poder de classificação do modelo, ou seja, para tentar fazer a 
+predição de maneira mais independente possível.
+
+```{r message=FALSE, warning=FALSE}
+r <- MASS::lda(formula = Class ~ ., #especi em funcao de todas as outras vars
+data = dados, #do dados iris
+prior = c(1,1)/2, #tenho 2 populacoes e defini probabilidade de
+#ocorrencia de cada populacao iguais para todas (1/2)
+CV=TRUE) #CV=TRUE: quero validacao cruzada (leave one out)
+```
+
+\ Construindo a tabela de confusão, onde o número de classificações corretas ficam 
+na diagonal.
+
+```{r message=FALSE, warning=FALSE}
+# Funcao Linear
+classificacao <- r$class
+cvl <- table(dados$Class,classificacao)
+cvl
+```
+
+\ Com uma baixa taxa de erro aparente, o modelo se mostrou bom para classificar os dados. E, considerando o erro *Classificar como benigno quando na verdade é maligno* como o mais prejudicial ao modelo, vemos que esse tipo de erro foi o mais significativo, representando quase 70% de todos os erros, o que pode ser um ponto fraco do modelo. 
   
+```{r message=FALSE, warning=FALSE}
+#Taxa de Erro Aparente
+TEA <- 1 - (sum(diag(cvl))/sum(cvl))
+paste0(round(TEA*100,2),"%")
+```
+```{r message=FALSE, warning=FALSE}
+rm(dados,r,classificacao,cvl,TEA)
+```
+# Tarefa 3 
+**Utilize o conjunto Boston Housing Dataset predizer o valor médio das casas ocupadas pelo proprietário (medv) por meio de técnicas e predição. Faça um relatório. Tal relatório deve ser estregue de maneira organizada discutindo os resultados encontrados.**
+
+## Regressão Linear Múltipla com stepwise
+
+\ Visando sempre a parcimônia do modelo, parece excessivo a utilização de dezoito variáveis para predizer uma. Por isso, utilizaremos o método de *stepwise*, que inclui as variáveis passo-a-passo e testa a permanência para determinar o modelo final. 
+
+
+\ Para a construção, o bando de dados foi dividido em dois, onde selecionou-se 80% dos dados para o treinamento e 20% para o teste. Além disso, a variável *tax* foi removida por possuir um $VIF=9.271222>5$ (Teste de multicolinearidade). A princípio,*rad* também apresentou $VIF$ alto, mas após a remoção de *TAX* o $VIF$ passou de $7.753354$ para $2.646155$, que é menor que 5 e, portanto, permaneceu. 
+
+```{r message=FALSE, warning=FALSE}
+library(mlbench) #banco de dados
+library(dplyr)
+library(tidyr)
+data("BostonHousing")
+#Padronizando as variáveis
+dados=BostonHousing%>%dplyr::mutate(
+  dplyr::across(.cols=1:13,~scale(as.numeric(.))));rm(BostonHousing)
+set.seed(573)#número da disciplina no PAVNET
+sum(is.na(dados));summary(dados)
+index <- sample(nrow(dados), nrow(dados) * 0.80)
+train <- dados[index, ]
+test <- dados[-index, ]
+#Definindo o modelo com todas as variáveis
+all <- lm(medv ~ ., data=train)
+#Verificando multicolinearidade
+olsrr::ols_coll_diag(all)[["vif_t"]]
+#Removendo tax
+train=train%>%dplyr::select(-c(tax))
+test=test%>%dplyr::select(-c(tax))
+all <- lm(medv ~ ., data=train)
+olsrr::ols_coll_diag(all)[["vif_t"]]
+#Modelo--------------------------------------
+#Definindo o modelo só com o intercepto
+intercept_only <- lm(medv ~ 1, data=train)
+#Definindo o modelo com todas as variáveis
+all <- lm(medv ~ ., data=train)
+#stepwise
+forward <- step(intercept_only, direction='forward', scope=formula(all), trace=0)
+
+```
+\ Sendo esse o modelo final 
+```{r message=FALSE, warning=FALSE}
+forward
+```
+
+### Avaliando o Modelo
+
+\ Analisando a ANOVA, vemos que o modelo é significativo ($F= 100.638$ e $p-valor=0$); possuí um $R^2=0.719$, indicando que $71,9\%$ da variabilidade de *medv* é explicada pelas variáveis que entraram no modelo;$R^2\ ajustado =0.712$ que é muito similar ao $R^2$, indicando não haver super ajuste do modelo (excesso de variáveis) .
+
+```{r message=FALSE, warning=FALSE}
+olsrr::ols_regress(forward)
+```
+
+### Predição  
+\ Agora, prevendo o Valor médio de casas ocupadas pelo proprietário em US\$ 1.000 e comparando com o valor real, vemos que o modelo teve uma ótima taxa de acerto, sendo a média prevista de $21,8212$ enquanto o valor real se encontra ligeiramente abaixo, em $21,41667$.
   
+
+```{r message=FALSE, warning=FALSE}
+previsao <- predict(forward, test)
+mean(previsao)
+mean(test$medv) 
+```
+### Observação
+
+\ Entretanto, é importante salientar que o modelo não passou no teste de normalidade devido a sua calda pesada nem no teste de homodestaticidade. Mas passou no teste de independência e multicolinearidade. 
+\ Ou seja, não cumpriu os pressupostos básicos do modelo de regressão linear múltiplo, tornando-o não confiável.
+
+```{r}
+#Normalidade 
+olsrr::ols_test_normality(forward)
+olsrr::ols_plot_resid_qq(forward)
+#Homocedasticidade
+olsrr::ols_test_breusch_pagan(forward)
+#Independência
+car::durbinWatsonTest(forward)
+#Multicolinearidade
+olsrr::ols_coll_diag(forward)[["vif_t"]]
+
+```
 
