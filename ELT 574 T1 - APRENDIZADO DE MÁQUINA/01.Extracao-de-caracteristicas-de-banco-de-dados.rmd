@@ -26,7 +26,7 @@ fonte: https://codecary.com/solved-modulenotfounderror-no-module-named-numpy/
 # pip3 install pandas
 # pip3 install matplotlib
 # pip3 install seaborn
-
+# pip install -U scikit-learn
 ```
 
 
@@ -60,6 +60,10 @@ mpl.rc('xtick', labelsize=12)
 mpl.rc('ytick', labelsize=12)
 import seaborn as sns #forma mais bonita de fazer graficos
 
+from sklearn.preprocessing import OrdinalEncoder #scikit-learn sera nossa biblioteca
+#principal na disciplina. Muitos metodos estao implementados para serem utilizados
+from sklearn.preprocessing import OneHotEncoder
+
 print('Setup completo!')
 
 ```
@@ -72,7 +76,6 @@ Etapas de construção de um modelo de ML:
 5. Ajuste do modelo com os dados de treinamento
 6. Validação do modelo e estimativa de desempenho com os dados de validação
 7. Implementação do modelo para aplicação
-
 ### 1. Formulação do problema
 
 *Estimar o valor médio das casas em um distrito da Califórnia, dado um determinado conjunto de dados e características deste distrito.*
@@ -94,20 +97,18 @@ Fonte: https://www.kaggle.com/camnugent/california-housing-prices
 
 ### 2. Seleção do banco de dados
 
+<!-- #Colab -->
+<!-- #Importar os dados do banco de dados -->
+<!-- #path = '/content/drive/MyDrive/1 UFV/Disciplinas/Disciplinas Lato-Sensu/ELT 574- Aprendizado de máquinas/Material da disciplina/Roteiros e aulas/Atividades/housing.csv' -->
+<!-- # df_housing = pd.read_csv(path) -->
+<!-- # print('Dataset carregado!') -->
+
 ```{python}
-# #Colab
-# # Importar os dados do banco de dados
-# path = '/content/drive/MyDrive/1 UFV/Disciplinas/Disciplinas Lato-Sensu/ELT 574 - Aprendizado de máquinas/Material da disciplina/Roteiros e aulas/Atividades/housing.csv'
-# df_housing = pd.read_csv(path)
-# print('Dataset carregado!')
-df_housing=pd.read_csv('F:/Estudo/Estudo---UFV/UFV---GitHub/01.Datasets/housing.csv')
+df_housing=pd.read_csv('S:/Education/Education---UFV/UFV---GitHub/01.Datasets/housing.csv')
 df_housing.head()#padrao é 5 (0 a 4)
 ```
 
-
 ## Aula 02 - Tipos de dados e tratamento de entradas
-
-
 
 ### Tipos de dados: 
 
@@ -127,12 +128,17 @@ df_housing.head()
 
 ## Verificar informacoes gerais sobre as variaveis do dataframe
 df_housing.info()
+```
 
-Variável categórica : 'ocean_proximity'
+Variável categórica nominal: 'ocean_proximity'
 
+```{python}
+#Verificando quantos casos temos em cada 'ocean_proximity'
 df_housing['ocean_proximity'].value_counts()
-
-df_housing.loc[lambda x: x['ocean_proximity']=='ISLAND']
+#Quero ver as 5 amostras que sao 'ocean_proximity'=='ISLAND'
+df_housing.loc[lambda x: x['ocean_proximity']=='ISLAND']#lambda procura linha por linha
+#Forma que mais gosto de filtrar
+df_housing[(df_housing.ocean_proximity=='ISLAND')]
 ```
 
 ### Ferramentas para exploração de dados:
@@ -155,9 +161,9 @@ df_housing.describe()
 
 # Distribuicao das frequencias
 df_housing.hist(bins=50, figsize=(20,15))
-plt.show()
-
+#Colocando linha que suaviza
 sns.histplot(data=df_housing,x='median_house_value',kde=True)
+plt.show()
 ```
 
 #### 2. Ferramentas de inferência
@@ -167,103 +173,179 @@ sns.histplot(data=df_housing,x='median_house_value',kde=True)
  * Regressão linear
  
 
-### Aula 03 - Relação entre variáveis e extração de características
-
-#### Explorando os dados do problema
 
 
-##### 1. Seleção das variáveis/características (feature selection)
+
+## Aula 03 - Relação entre variáveis e extração de características
+
+### Explorando os dados do problema
+
+
+#### 1. Seleção das variáveis/características (feature selection)
  * Correlação entre as variáveis de entrada e saída
     * Análise gráfica
     * Coeficiente de correlação linear
+    
+##### Caminhos para construir um gráfico 
 
+\ Primeiro, plotamos latitude e longitude, para ver como os dados estão dispersos 
+
+```{python}
 # Grafico com as posicoes geograficas das casas
 df_housing.plot(kind='scatter', x='longitude', y='latitude')
+plt.show()
+#plt.close()
+```
+\ Com $alpha=1$ podemos destacar os locais com mais e menos pontos, para ver as reais concentrações
 
+```{python}
 # Grafico com as posicoes geograficas das casas e marcadores com 10% da cor
 df_housing.plot(kind='scatter', x='longitude', y='latitude',alpha=0.1)
+plt.show()
+```
+\ Por fim, chegamos ao modelo final, onde adicionamos "calor" de acordo com o preço das casas. 
+Assim, podemos ver a latitude x longitute influencia no preço das casas e na concentração populacional.
 
-# Grafico com as posicoes geograficas das casas e marcadores com 40% da cor e modulados pelo 'population'/100 e coloridos de acordo com o valor das casas
+```{python}
+# Grafico com as posicoes geograficas das casas e marcadores com 40% da cor e 
+#modulados pelo 'population'/100 e coloridos de acordo com o valor das casas
 df_housing.plot(kind='scatter', x='longitude', y='latitude',alpha=0.4, # posicao geografica
-                s=df_housing['population']/100, label='Population', figsize=(15,10), # tamanho do marcado de acordo com a media da populacao no quarteirao
-                c='median_house_value',cmap=plt.get_cmap('jet'),colorbar=True) # cor do marcado de acordo com o valor das casas
+                s=df_housing['population']/100, label='Population', figsize=(15,10), # tamanho 
+                #do marcado de acordo com a media da populacao no quarteirao
+                c='median_house_value',cmap=plt.get_cmap('jet'),colorbar=True) # cor
+                #do marcado de acordo com o valor das casas
 plt.legend()
+plt.show()
+```
+##### Verificando a correlação pelo Coeficiente de Correlação Linear
 
+\ Já vimos a correlçao de forma visual, agora vamos ver por meio do coeficiente.
+
+```{python echo=TRUE}
 # Matriz de correlacao 
-corr_matrix = df_housing.corr()
-corr_matrix
+corr_matrix = df_housing.corr(numeric_only=True).round(2)
+#Grafico
+plt.figure(figsize= (6, 6))
+mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+sns.heatmap(corr_matrix,annot=True,vmax=1, vmin=-1, center=0, cmap='vlag',mask=mask)
+plt.show()
+```
+\ Outra forma de verificar é selecioandno uma variável de interesse. Nesse exemplo,
+estamos interessados em verificar quais variáveis estã ocorrelacionadas com a média do 
+preço das casas. 
+ 
+\ Observe que a partir de *households* e *total_bedrooms* não parecem influenciam 
+no valor da casa; Já o tamanho (*median_income*) e a *latitute* são os mais infleuntes.
 
+```{python echo=TRUE}
 # Correlacao das entradas com a saída desejada
 corr_matrix['median_house_value'].sort_values(ascending=False)
+```
+##### Verificando a correlação pelos gráficos de dispersão 
+
+```{python echo=TRUE}
 
 # Graficos de dispersao entre as variaveis com melhores correlacoes
 from pandas.plotting import scatter_matrix
 
 attributes = ['median_house_value', 'median_income', 'total_rooms', 'housing_median_age']
 scatter_matrix(df_housing[attributes],figsize=(20,15))
-
+plt.show()
+```
+```{python echo=TRUE}
 df_housing.plot(kind='scatter',x='median_income',y='median_house_value',alpha=0.1,figsize=(20,15))
+plt.show()
+```
 
-##### 2. Tratamento de variáveis categóricas
+#### 2. Tratamento de variáveis categóricas
 
-###### Transformação de variáveis categóricas em binárias (dummy)
+##### Transformação de variáveis categóricas em binárias (dummy)
+
  * **Cuidado ao transformar categóricas ordinárias**
 
-
+```{python}
 # Transformando variaveis categoricas
 
 df_housing_cat = df_housing[['ocean_proximity']] #repassa o vetor com os indices
 df_housing_cat.value_counts()
 
-from sklearn.preprocessing import OrdinalEncoder #scikit-learn sera nossa biblioteca principal na disciplina. Muitos metodos estao implementados para serem utilizados
 ordinal_encoder = OrdinalEncoder()
 df_housing_cat_encoded = ordinal_encoder.fit_transform(df_housing_cat)
 df_housing_cat_encoded
-
+#vejo quais categorias ele está transformando
 ordinal_encoder.categories_
+```
 
 *Qual o problema aqui?*
 - As categorias ficam ordinárias!
 
+\ Então vamos utilziar a outra forma de fazer essa recodificação, que é o *OneHotEncoder*, que cria variáveis dummies
 
+```{python}
 #One Hot Encoding (variaveis dummies)
-from sklearn.preprocessing import OneHotEncoder
 cat_encoder = OneHotEncoder()
 df_housing_cat_1hot = cat_encoder.fit_transform(df_housing_cat)
 df_housing_cat_1hot
+```
+```{python}
 # cria uma matriz esparca com as variaveis binarias
 
 #visualizado a matriz esparca
 df_housing_cat_1hot.toarray()
+#pd.DataFrame(df_housing_cat_1hot.toarray())
+```
 
-# categorias transformadas com o OneHotEncoder
-cat_encoder.categories_
-
-######  Remoção de variáveis que não acrescentam informações ao modelo
+#####  Remoção de variáveis que não acrescentam informações ao modelo
 +  Variáveis com apenas um valor
 +  Variáveis com muitos dados ausentes
-
+```{python}
 # Identificando variaveis com dados ausentes ou invalidos
-df_housing.describe()
-
+desc=df_housing.describe()
+desc
+```
+```{python}
 # Tres formas de fazer o tratamento
 df_housing_cleaning = df_housing
+```
 
+\ Observamos que *total_bedrooms* possuí 207 dados faltantes.
+
+\ Uma alternativa, seria excluir a coluna do banco de dados: uma alternativa muito boa quando o essa variável tem pouca correlação com o que queremos, não está trazendo benefícios ao modelo e etc. 
+
+```{python}
+### Descarta a coluna 'total_bedrooms'
+df_housing_cleaning.drop('total_bedrooms',axis=1)#axis=1 tira coluna; axis=0 tira linha 
+```
+
+
+\ Ou se a variável é importante, podemos retirar esses 207 casos do banco de dados
+
+```{python}
 ## Metodos mais radicais
 ### Retira as linhas com dados invalidos
 df_housing_cleaning.dropna(subset=['total_bedrooms']) 
+```
+\ Agora, nossa data.frame ficou com 20.433 casos. É importante observar que não podemos 
+fazer isso quando temos poucas amostras (muitos parâmetros necessitam de muitos dados, o que 
+é o caso de um rede profunda; já nas redes rasas/neurais, são mais simples e não necessitam de 
+muito parâmetros para rodar. O índicado é ter uma amostra para cada parâmetro que vamos treinar: mo mínimo 35 para cada parâmetro).  
 
-### Descarta a coluna 'total_bedrooms'
-df_housing_cleaning.drop('total_bedrooms',axis=1) 
+\ por fim, a terceira opção é imputar dados 
 
+```{python}
 ### Imputa (insere) dados onde esta faltando
 median = df_housing['total_bedrooms'].median() # calcula a media dos dados validos
-df_housing_cleaning['total_bedrooms'].fillna(median,inplace=True) #substitui os valores invalidos pela media do grupo valido
+df_housing_cleaning['total_bedrooms'].fillna(median,inplace=True) #substitui os valores 
+#invalidos pela media do grupo valido
+```
 
-#### 3. Extração e pré-processamento das variáveis
+### 3. Extração e pré-processamento das variáveis
 *Otimizar o número de variáveis sem perder desempenho do modelo*
 
-##### Técnicas de pré-processamento e extração de características
+(Obs.: fazer isso nos dados de treinamento. Ou seja, pego o treinamento, obtenho a 
+média, o desvio-padrão e são essas valores que irei usar no teste do modelo, para validar).
+
+#### Técnicas de pré-processamento e extração de características
  * Uniformização (xi'= (xi-u)/s): 
  ```
  from sklearn.preprocessing import StandardScaler
@@ -276,21 +358,28 @@ df_housing_cleaning['total_bedrooms'].fillna(median,inplace=True) #substitui os 
  * Redução de dimensionalidade
   * Cada problema requer um método diferente. Depende da análise
 
-###### Combinação de variáveis?
+##### Combinação de variáveis?
 - *É possível criar novas variáveis a partir das variáveis do problema?*
 
 - As variáveis *total_bedrooms*, *total_rooms* e *population* sozinhas fazem algum sentido para quem vai comprar uma casa?
 
 df_housing.columns
-
-# Criando novas variaveis para analisar o problema
+```{python}
+#Criando variavel quartos por familia 
 df_housing["rooms_per_household"] = df_housing["total_rooms"]/df_housing["households"]
+#Criando variavel populacao por familia 
 df_housing["population_per_household"]= df_housing["population"]/df_housing["households"]
-
-corr_matrix = df_housing.corr()
+#Verificando como essas variaveis vao se comportar com relacao a saida
+corr_matrix = df_housing.corr(numeric_only=True)
 corr_matrix['median_house_value'].sort_values(ascending=False)
 
 df_housing.plot(kind='scatter', x='rooms_per_household',y='median_house_value', alpha = 0.1)
 plt.axis([0,5,0,520000])
 plt.show()
+# Criando novas variaveis para analisar o problema
+```
+
+\ Observei que *rooms_per_household* tem uma correlação boa, mas *population_per_household* tem 
+nenhuma correlação (em relação ao *median_house_value*).  
+
 
