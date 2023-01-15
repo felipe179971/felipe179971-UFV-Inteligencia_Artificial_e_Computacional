@@ -1,0 +1,296 @@
+---
+title: "01.Extração de características de banco de dados"
+author: "Felipe Rocha"
+date: "2022-1-14"
+output: pdf_document
+---
+
+
+\ Primeiramente, configurei o ambiente e indiquei qual Python quero usar
+
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+use_python("C:/Users/Casa/AppData/Local/Programs/Python/Python310/python.exe")
+
+```
+
+\ E, para instalar os pacotes, precisei executar o seguintes comando no *Terminal*:
+fonte: https://codecary.com/solved-modulenotfounderror-no-module-named-numpy/
+
+```{python}
+
+## for python 3 
+# pip3 install numpy
+# pip3 install pandas
+# pip3 install matplotlib
+# pip3 install seaborn
+
+```
+
+
+# Semana 1 - Introdução ao Aprendizado de Máquinas
+
+## Aula 01 - Introdução aos problemas de aprendizado de máquinas
+
+
+```{python}
+#Importando as bibliotecas para análise do problema e configurando o notebook
+
+## OS para executar comandos de diretorio
+import os
+
+## Habilitar Google Drive no Colab
+#from google.colab import drive#apenas para Colab
+#drive.mount('/content/drive')#apenas para Colab
+
+## NumPy para manipular matrizes e vetores
+import numpy as np
+
+## Pandas para manipular os dataframes
+import pandas as pd
+
+## Plotar figuras bonitas
+#%matplotlib inline
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+mpl.rc('axes', labelsize=14)
+mpl.rc('xtick', labelsize=12)
+mpl.rc('ytick', labelsize=12)
+import seaborn as sns #forma mais bonita de fazer graficos
+
+print('Setup completo!')
+
+```
+Etapas de construção de um modelo de ML:
+ 
+1. Formulação do problema
+2. Seleção e adaptação do banco de dados
+3. Pré-processamento do banco de dados
+4. Separação do banco de dados em dados de treinamento e validação
+5. Ajuste do modelo com os dados de treinamento
+6. Validação do modelo e estimativa de desempenho com os dados de validação
+7. Implementação do modelo para aplicação
+
+### 1. Formulação do problema
+
+*Estimar o valor médio das casas em um distrito da Califórnia, dado um determinado conjunto de dados e características deste distrito.*
+
+Fonte: https://www.kaggle.com/camnugent/california-housing-prices
+
+*Variáveis do banco de dados:*
+
+- longitude: *Longitude*
+- latitude - *Latitude*
+- housing_median_age - *Idade média das construções no quarteirão*
+- total_rooms - *Número de cômodos no quarteirão*
+- total_bedrooms - *Número de quartos no quarteirão*
+- population - *Número de pessoas que vivem no quarteirão*
+- households - *Número de famílias vivendo no mesmo quarteirão*
+- median_income - *Renda média mensal do quarteirão em que a casa está situada (medida em dezenas de milhares de dólares)*
+- median_house_value (target) - *Valor médio das casas do quarteirão em que a casa está situada (em dólares)* 
+- ocean_proximity - *Proximidade da casa do oceano/mar*
+
+### 2. Seleção do banco de dados
+
+```{python}
+# #Colab
+# # Importar os dados do banco de dados
+# path = '/content/drive/MyDrive/1 UFV/Disciplinas/Disciplinas Lato-Sensu/ELT 574 - Aprendizado de máquinas/Material da disciplina/Roteiros e aulas/Atividades/housing.csv'
+# df_housing = pd.read_csv(path)
+# print('Dataset carregado!')
+df_housing=pd.read_csv('F:/Estudo/Estudo---UFV/UFV---GitHub/01.Datasets/housing.csv')
+df_housing.head()#padrao é 5 (0 a 4)
+```
+
+
+## Aula 02 - Tipos de dados e tratamento de entradas
+
+
+
+### Tipos de dados: 
+
+1. Qualitativos
+ * Nominal 
+ * Ordinários
+
+2. Quantitativos
+ * Discreto
+ * Contínuo
+
+```{python}
+# Conhecendo o banco de dados
+## Verificar se foi importado corretamente
+df_housing.head()
+
+
+## Verificar informacoes gerais sobre as variaveis do dataframe
+df_housing.info()
+
+Variável categórica : 'ocean_proximity'
+
+df_housing['ocean_proximity'].value_counts()
+
+df_housing.loc[lambda x: x['ocean_proximity']=='ISLAND']
+```
+
+### Ferramentas para exploração de dados:
+
+#### 1. Ferramentas descritivas  
+  * Medidas de tendências
+    * Média
+    * Mediana
+    * Moda
+ * Medidas de dispersão
+    * Intervalo
+    * Desvio padrão
+ * Distribuição das frequências
+ * Histogramas
+ 
+```{python}
+
+# Medidas de tendencia e dispersao
+df_housing.describe()
+
+# Distribuicao das frequencias
+df_housing.hist(bins=50, figsize=(20,15))
+plt.show()
+
+sns.histplot(data=df_housing,x='median_house_value',kde=True)
+```
+
+#### 2. Ferramentas de inferência
+ * Teste de hipótese
+ * Análise da variância (ANOVA)
+ * Teste de chi-quadrado
+ * Regressão linear
+ 
+
+### Aula 03 - Relação entre variáveis e extração de características
+
+#### Explorando os dados do problema
+
+
+##### 1. Seleção das variáveis/características (feature selection)
+ * Correlação entre as variáveis de entrada e saída
+    * Análise gráfica
+    * Coeficiente de correlação linear
+
+# Grafico com as posicoes geograficas das casas
+df_housing.plot(kind='scatter', x='longitude', y='latitude')
+
+# Grafico com as posicoes geograficas das casas e marcadores com 10% da cor
+df_housing.plot(kind='scatter', x='longitude', y='latitude',alpha=0.1)
+
+# Grafico com as posicoes geograficas das casas e marcadores com 40% da cor e modulados pelo 'population'/100 e coloridos de acordo com o valor das casas
+df_housing.plot(kind='scatter', x='longitude', y='latitude',alpha=0.4, # posicao geografica
+                s=df_housing['population']/100, label='Population', figsize=(15,10), # tamanho do marcado de acordo com a media da populacao no quarteirao
+                c='median_house_value',cmap=plt.get_cmap('jet'),colorbar=True) # cor do marcado de acordo com o valor das casas
+plt.legend()
+
+# Matriz de correlacao 
+corr_matrix = df_housing.corr()
+corr_matrix
+
+# Correlacao das entradas com a saída desejada
+corr_matrix['median_house_value'].sort_values(ascending=False)
+
+# Graficos de dispersao entre as variaveis com melhores correlacoes
+from pandas.plotting import scatter_matrix
+
+attributes = ['median_house_value', 'median_income', 'total_rooms', 'housing_median_age']
+scatter_matrix(df_housing[attributes],figsize=(20,15))
+
+df_housing.plot(kind='scatter',x='median_income',y='median_house_value',alpha=0.1,figsize=(20,15))
+
+##### 2. Tratamento de variáveis categóricas
+
+###### Transformação de variáveis categóricas em binárias (dummy)
+ * **Cuidado ao transformar categóricas ordinárias**
+
+
+# Transformando variaveis categoricas
+
+df_housing_cat = df_housing[['ocean_proximity']] #repassa o vetor com os indices
+df_housing_cat.value_counts()
+
+from sklearn.preprocessing import OrdinalEncoder #scikit-learn sera nossa biblioteca principal na disciplina. Muitos metodos estao implementados para serem utilizados
+ordinal_encoder = OrdinalEncoder()
+df_housing_cat_encoded = ordinal_encoder.fit_transform(df_housing_cat)
+df_housing_cat_encoded
+
+ordinal_encoder.categories_
+
+*Qual o problema aqui?*
+- As categorias ficam ordinárias!
+
+
+#One Hot Encoding (variaveis dummies)
+from sklearn.preprocessing import OneHotEncoder
+cat_encoder = OneHotEncoder()
+df_housing_cat_1hot = cat_encoder.fit_transform(df_housing_cat)
+df_housing_cat_1hot
+# cria uma matriz esparca com as variaveis binarias
+
+#visualizado a matriz esparca
+df_housing_cat_1hot.toarray()
+
+# categorias transformadas com o OneHotEncoder
+cat_encoder.categories_
+
+######  Remoção de variáveis que não acrescentam informações ao modelo
++  Variáveis com apenas um valor
++  Variáveis com muitos dados ausentes
+
+# Identificando variaveis com dados ausentes ou invalidos
+df_housing.describe()
+
+# Tres formas de fazer o tratamento
+df_housing_cleaning = df_housing
+
+## Metodos mais radicais
+### Retira as linhas com dados invalidos
+df_housing_cleaning.dropna(subset=['total_bedrooms']) 
+
+### Descarta a coluna 'total_bedrooms'
+df_housing_cleaning.drop('total_bedrooms',axis=1) 
+
+### Imputa (insere) dados onde esta faltando
+median = df_housing['total_bedrooms'].median() # calcula a media dos dados validos
+df_housing_cleaning['total_bedrooms'].fillna(median,inplace=True) #substitui os valores invalidos pela media do grupo valido
+
+#### 3. Extração e pré-processamento das variáveis
+*Otimizar o número de variáveis sem perder desempenho do modelo*
+
+##### Técnicas de pré-processamento e extração de características
+ * Uniformização (xi'= (xi-u)/s): 
+ ```
+ from sklearn.preprocessing import StandardScaler
+ ```
+ * Normalização 
+ ```
+ from sklearn.preprocessing import MinMaxScaler
+ ```
+ * Melhoramento da relação sinal/ruído
+ * Redução de dimensionalidade
+  * Cada problema requer um método diferente. Depende da análise
+
+###### Combinação de variáveis?
+- *É possível criar novas variáveis a partir das variáveis do problema?*
+
+- As variáveis *total_bedrooms*, *total_rooms* e *population* sozinhas fazem algum sentido para quem vai comprar uma casa?
+
+df_housing.columns
+
+# Criando novas variaveis para analisar o problema
+df_housing["rooms_per_household"] = df_housing["total_rooms"]/df_housing["households"]
+df_housing["population_per_household"]= df_housing["population"]/df_housing["households"]
+
+corr_matrix = df_housing.corr()
+corr_matrix['median_house_value'].sort_values(ascending=False)
+
+df_housing.plot(kind='scatter', x='rooms_per_household',y='median_house_value', alpha = 0.1)
+plt.axis([0,5,0,520000])
+plt.show()
+
